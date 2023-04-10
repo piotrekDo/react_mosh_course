@@ -125,3 +125,10 @@ export default ListGroup;
 ## Obsługa eventów w React
 
 W React każdy element przyjmuje prop `on`_`EVENT`_, np. `onClick` co odpowiada eventHandler przyjmującym zdażenie `click`. Do niego przekazujemy funkcję, która ma się wykonać.
+
+
+## Props vs state
+**_Propsy_** to dane przekazane do komponentu jako **argumenty**. Powinny być traktowane jako _niemutowalne_, nie istnieje mechanizm zabraniający ich nadpisania (jak zmienne finalne, const), ale nie jest to dobra praktyka. 
+**_State_** jest rodzajem danych **zarządzanych wewnątrz komponentu**, podlegającemu zmianom, są jak najbardziej _mutowalne_.
+
+Propsy można porównać do argumentów funkcji, zaś state do lokalnych zmiennych. Cechą wspólną jest re-render komponentu, gdy któreś się zmieni.

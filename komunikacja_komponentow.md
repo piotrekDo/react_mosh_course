@@ -24,6 +24,31 @@ function App() {
 }
 ```
 
+### Children- specjalny props przekazywany przez rodzica
+Każdy komponent React może przyjąć specjalny rodzaj props określany jako _children_, pozwala to na przekazywanie do komponentu dziecka kodu HTML.
+```
+import { ReactNode } from "react";
+
+interface Props {
+  children: ReactNode;
+}
+
+export const Alert = ({ children }: Props) => {
+  return <div className='alert alert-primary'>{children}</div>;
+};
+```
+**Rodzic**
+```
+function App() {
+  return {
+    <div>
+      <Alert>
+        Hello <span>World</span>
+      </Alert>
+    </div>
+  }
+}
+```
 
 ## Komunikacja dziecka z rodzicem
 Odbywa się za pomocą funkcji przekazanej przez rodzica do dziecka. Działa na zasadzie obserwatora, w taki sposób, że wykonując funkcję w komponencie rodzica wykonujemy akcję w parencie. 

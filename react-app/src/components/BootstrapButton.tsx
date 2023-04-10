@@ -3,12 +3,12 @@ import React from 'react';
 interface Props {
   type: ButtonType;
   text: string;
-  onClickHandler: (button) => void;
+  onClickHandler: (type: ButtonType) => void;
 }
 
 export const BootstrapButton = ({ type, text, onClickHandler }: Props) => {
   return (
-    <button type='button' className={`btn ${type}`} onClick={(event) => onClickHandler(event.target)}>
+    <button type='button' className={`btn ${type}`} onClick={(event) => onClickHandler(type)}>
       {text}
     </button>
   );

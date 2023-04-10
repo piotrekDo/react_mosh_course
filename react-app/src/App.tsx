@@ -1,87 +1,33 @@
 import { useState } from 'react';
 import './App.css';
-import { Alert } from './components/Alert';
-import { BootstrapButton, ButtonType } from './components/BootstrapButton';
-import ListGroup from './components/ListGroup';
-import produce from 'immer';
-
-import { setAlertTextHandler } from './tools/AppService';
-import { Like } from './components/Like';
+import { Navbar } from './components/Navbar';
+import { Cart } from './components/Cart';
+import { ExpandableText } from './components/ExpandableText';
 
 function App() {
-  const items = ['New York', 'San Francisco', 'Tokyo', 'London', 'Paris'];
-  const [showAlert, setShowAlert] = useState<boolean>(false);
-  const [alertText, setAlertText] = useState<string>('');
-  const [drink, setDrink] = useState({
-    title: 'Americano',
-    price: 5,
-  });
-  const [bugs, setBugs] = useState([
-    { id: 1, title: 'Bug1', fixed: false },
-    { id: 2, title: 'Bug2', fixed: false },
-  ]);
+  const [cartItems, setCartItems] = useState(['Product1', 'Product2']);
 
-  const handleSelectItem = (item: string) => {
-    console.log(item);
-  };
-
-  const handleButtonClick = (type: ButtonType) => {
-    setAlertText(setAlertTextHandler(type));
-    setShowAlert(true);
-  };
-
-  const handleCloseAlertClickButton = () => {
-    setShowAlert(false);
-  };
-
-  const handleLikeButton = (isLiking: boolean) => {
-    console.log(isLiking);
-  };
-
-  const handleDrinkBtnClick = () => {
-    setDrink({
-      ...drink,
-      price: 18,
-    });
-  };
-
-  const handleBugBtnClick = () => {
-    setBugs(
-      produce(draft => {
-        const bug = draft.find(bug => bug.id === 1);
-        if (bug) bug.fixed = true;
-      })
-    );
+  const clearCarthandler = () => {
+    setCartItems([]);
   };
 
   return (
-    <div>
-      <ListGroup items={items} heading='Cities' onSelectItem={handleSelectItem} />
-      {showAlert && <Alert onCloseClickHandler={handleCloseAlertClickButton}>{alertText}</Alert>}
-      <BootstrapButton
-        type={ButtonType.Primary}
-        text='Im primary'
-        onClickHandler={handleButtonClick}
-      />
-      <BootstrapButton
-        type={ButtonType.Secondary}
-        text='Im Secondary'
-        onClickHandler={handleButtonClick}
-      />
-      <Like like={handleLikeButton} />
-      <button className='btn btn-success' onClick={handleDrinkBtnClick}>
-        Drink updater
-      </button>
-      {drink.price} {drink.title}
-      <div className='mt-5'>
-        <button className='btn btn-success' onClick={handleBugBtnClick}>
-          Bug updater
-        </button>
-        {bugs.map(bug => (
-          <p key={bug.id}>{`${bug.title}, ${bug.fixed}`}</p>
-        ))}
+    <>
+      <div>
+        <Navbar cartItemsCount={cartItems.length}></Navbar>
+        <Cart cartItems={cartItems} onClearCart={clearCarthandler}></Cart>
       </div>
-    </div>
+      <div className='mt-5 p-3'>
+        <h2>Excercise truncate text</h2>
+        <ExpandableText maxLength={6}>
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestiae omnis, rem nemo error
+          voluptates impedit quasi neque voluptatibus deserunt minima repellat adipisci debitis amet
+          facilis quaerat iste, at eveniet rerum ullam cupiditate. Hic, maxime! Architecto
+          cupiditate quibusdam mollitia id veritatis possimus ullam numquam hic illum vitae. Sed
+          laboriosam consectetur asperiores.
+        </ExpandableText>
+      </div>
+    </>
   );
 }
 

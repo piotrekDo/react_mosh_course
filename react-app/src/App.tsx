@@ -6,6 +6,7 @@ import ListGroup from './components/ListGroup';
 
 import {setAlertTextHandler} from './tools/AppService'
 import { FaDog } from 'react-icons/fa'
+import { Like } from './components/Like';
 
 function App() {
   const items = ['New York', 'San Francisco', 'Tokyo', 'London', 'Paris'];
@@ -24,6 +25,10 @@ function App() {
     setShowAlert(false);
   };
 
+  const handleLikeButton = (isLiking: boolean) => {
+    console.log(isLiking)
+  }
+
   return (
     <div>
       <ListGroup items={items} heading='Cities' onSelectItem={handleSelectItem} />
@@ -38,7 +43,7 @@ function App() {
         text='Im Secondary'
         onClickHandler={handleButtonClick}
       />
-      <FaDog color='blue' size="2rem"/>
+      <Like like={handleLikeButton}/>
     </div>
   );
 }

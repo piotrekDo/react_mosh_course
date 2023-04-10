@@ -5,6 +5,7 @@ import { BootstrapButton, ButtonType } from './components/BootstrapButton';
 import ListGroup from './components/ListGroup';
 
 import {setAlertTextHandler} from './tools/AppService'
+import { FaDog } from 'react-icons/fa'
 
 function App() {
   const items = ['New York', 'San Francisco', 'Tokyo', 'London', 'Paris'];
@@ -37,6 +38,7 @@ function App() {
         text='Im Secondary'
         onClickHandler={handleButtonClick}
       />
+      <FaDog color='blue' size="2rem"/>
     </div>
   );
 }

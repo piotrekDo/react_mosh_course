@@ -1,4 +1,18 @@
 import { MouseEvent, useState } from 'react';
+import styled from 'styled-components';
+
+const List = styled.ul`
+  list-style: none;
+  padding: 0;
+`;
+
+interface ListItemProps{
+  active: boolean;
+}
+const ListItem = styled.li<ListItemProps>`
+  padding: 5px;
+  background: ${props => props.active ? 'blue': 'none'}
+`;
 
 interface Props {
   items: string[];
@@ -13,10 +27,10 @@ function ListGroup({ items, heading, onSelectItem}: Props) {
     <>
       <h1>{heading}</h1>
       {items.length === 0 && <p>No items found</p>}
-      <ul className='list-group'>
+      <List>
         {items.map((item, index) => (
-          <li
-            className={index === selectedIndex ? 'list-group-item active' : 'list-group-item'}
+          <ListItem
+            active = {index === selectedIndex}
             key={index}
             onClick={event => {
               setSelectedIndex(index);
@@ -24,9 +38,9 @@ function ListGroup({ items, heading, onSelectItem}: Props) {
             }}
           >
             {item}
-          </li>
+          </ListItem>
         ))}
-      </ul>
+      </List>
     </>
   );
 }

@@ -1,0 +1,1 @@
+Do obsługi formularzy w React wykorzystujemy _listener_ `onSubmit` zapisywany w tagu formularza. Przekazujemy do niego odpowiedni handler **pamiętając o `event.preventDefault()`**

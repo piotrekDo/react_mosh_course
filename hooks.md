@@ -61,3 +61,15 @@ const [bugs, setBugs] = useState([
     );
   };
 ```
+
+## useRef
+Pozwala przechowywać referencję, najczęściej do elementu drzewa DOM. Można go wykorzystać do inputów formularza. Powszechną praktyką jest jego inicjalizaja jako null. Nie da się tego zrobić inaczej, jako że React renderuje drzewo DOM dopiero po stworzeniu komponentu, zatem na chwilę zapisu hooka nie ma możliwości przekazania do niego elementu DOM. 
+```
+const nameRef = useRef<HTMLInputElement>(null);
+```
+następnie w konkretnym inpucie zapisujemy props `ref` do którego przekazujemy hook:
+```
+<input ref={nameRef} id='name' type='text' className='form-control' />
+```
+
+Do refa odwołujemy się poprzez `current`, ew z dopiskiem `value` w przypadku form input: `console.log(nameRef.current?.value);`

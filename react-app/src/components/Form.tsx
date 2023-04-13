@@ -1,7 +1,8 @@
-import React, { FormEvent, useRef, useState } from 'react';
+import React, { FormEvent, MouseEvent, useRef, useState } from 'react';
 import { useForm, FieldValues } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod'
+import styles from './Form.module.css'
 
 const schema = z.object({
     name: z.string().min(3, {message: 'Name must be at least 3 characters.'}),
@@ -13,8 +14,23 @@ type FormData = z.infer<typeof schema>
 export const Form = () => {
   const {register, handleSubmit, formState: { errors, isValid }} = useForm<FormData>({resolver: zodResolver(schema)});
 
-
   const onSubmitDataHandler = (data: FieldValues) => console.log(data);
+  let isLeft = true;
+  const handleMouseEnter = (event: MouseEvent) => {
+    const btn:HTMLButtonElement = event.target;
+    if (isValid) return;
+    btn.disabled = true;
+    if(isLeft) {
+      btn.classList.add(styles.moveRight);
+      btn.classList.remove(styles.moveLeft);
+    }
+    else {
+      btn.classList.add(styles.moveLeft);
+      btn.classList.remove(styles.moveRight);
+    }
+    isLeft = !isLeft
+    btn.disabled = false;
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmitDataHandler)} >
@@ -37,7 +53,7 @@ export const Form = () => {
         <input {...register('age', {valueAsNumber: true})} id='age' type='number' className='form-control' />
         {errors.age && <p className='text-danger'>{errors.age.message}</p>}
       </div>
-      <button disabled={!isValid} className='btn btn-primary' type='submit'>
+      <button onMouseEnter={(event) => handleMouseEnter(event)} className='btn btn-primary' type='submit'>
         Submit
       </button>
     </form>

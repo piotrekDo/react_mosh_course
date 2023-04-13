@@ -1,0 +1,9 @@
+.moveRight {
+    transform: translateX(200px);
+    transition: transform 2s;
+}
+
+.moveLeft {
+    transform: translateX(0);
+    transition: transform 2s;
+}

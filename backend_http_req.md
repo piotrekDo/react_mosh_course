@@ -343,7 +343,7 @@ function App() {
 Metody generyczne do zaimplementowania już w klasie zainteresowanej. Customwy jest endpoint, zatem nie zwracmy instancji klasy a **funkcję** tworzącą taką klasę, która przyjmie endpoint
 
 ```
-import apiClient from './api-client';
+import { AxiosInstance } from "axios";
 
 interface Entity {
     id: number;
@@ -351,31 +351,33 @@ interface Entity {
 
 class HttpService {
   endpoint: string;
+  apiClient: AxiosInstance;
 
-  constructor(endpoint: string) {
+  constructor(endpoint: string, apiClient: AxiosInstance) {
     this.endpoint = endpoint;
+    this.apiClient = apiClient;
   }
 
   getAll<T>() {
     const controller = new AbortController();
-    const request = apiClient.get<T[]>(this.endpoint, { signal: controller.signal });
+    const request = this.apiClient.get<T[]>(this.endpoint, { signal: controller.signal });
     return { request, cancel: () => controller.abort() };
   }
 
   delete(id: number) {
-    return apiClient.delete(`${this.endpoint}/${id}`);
+    return this.apiClient.delete(`${this.endpoint}/${id}`);
   }
 
   add<T>(entity: T) {
-    return apiClient.post(this.endpoint, entity);
+    return this.apiClient.post(this.endpoint, entity);
   }
 
   update<T extends Entity>(entity: T) {
-    return apiClient.patch(`${this.endpoint}/${entity.id}`, entity);
+    return this.apiClient.patch(`${this.endpoint}/${entity.id}`, entity);
   }
 }
 
-const create = (endpoint: string) => new HttpService(endpoint);
+const create = (endpoint: string, apiClient: AxiosInstance) => new HttpService(endpoint, apiClient);
 
 export default create;
 ```
@@ -383,6 +385,7 @@ export default create;
 Wóczas `user-service.ts` jest jedynie implementacją serwisu i to jedyne miejsce, gdzie określany jest endpoint.
 
 ```
+import axios from 'axios';
 import create from './http-service';
 
 export interface User {
@@ -390,7 +393,12 @@ export interface User {
   name: string;
 }
 
-export default create('/users');
+const apiClient = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com',
+    // headers: {}
+});
+
+export default create('/users', apiClient);
 ```
 
 

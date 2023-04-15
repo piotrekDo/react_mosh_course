@@ -1,3 +1,4 @@
+import axios from 'axios';
 import create from './http-service';
 
 export interface User {
@@ -5,7 +6,12 @@ export interface User {
   name: string;
 }
 
-export default create('/users');
+const apiClient = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com',
+    // headers: {}
+});
+
+export default create('/users', apiClient);
 
 
 

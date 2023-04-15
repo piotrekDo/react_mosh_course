@@ -73,3 +73,101 @@ następnie w konkretnym inpucie zapisujemy props `ref` do którego przekazujemy 
 ```
 
 Do refa odwołujemy się poprzez `current`, ew z dopiskiem `value` w przypadku form input: `console.log(nameRef.current?.value);`
+
+## useEffect - _afterRender_
+Pozwala odseparować zmienny kod od etapu renderingu compoenetu. Dzięki temu funkcja pozostaje **pure** co jest kluczowym założeniem _React_. Do side effect możemy zaliczyć:
+- pobieranie/zapis danych z local storage
+- pobranie/zapis danych z serwera
+- ręczna zmiana drzewa DOM
+Żadna z tych rzeczy nie ma nic wspólnego z renderwoaniem JSX. _useEffect_ pozwala wykonać fragment kodu **po wyrenderowaniu** komponentu. Przyjmuje funkcję do wykonania jako argument. Może być zapisany jedynie u góry komponentu. **Można zapisać kilka useEffect** w ramach jednego komponentu. Np. po wyrenderowaniu komponentu _focusujemy_ input i zmieniamy title documentu.
+
+```
+function App() {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Side effect
+    if (ref.current) ref.current.focus();
+  })
+
+  useEffect(() => {
+    document.title = 'Use Effect'
+  })
+
+  return (
+    <div>
+      <input ref={ref} type='text' className='form-control'/>
+    </div>
+  );
+}
+
+export default App;
+```
+
+### useEffect dependencies
+Domyślnym zachowaniem _useEffect_ jest wykonanie przekazanej funkcji **po każdym** wyrenderowaniu, przekazanie zależności pozwala uzyskać więcej kontroli. Np. chcemy pobrać dane z backendu tylko raz w życiu komponentu, nie po każdej zmianie np. useState. Zależności przekazujemy jako drugi argument, po funkcji, w postaci **tablicy**. W sytuacji gdy którykolwiek z propsów tam przekazanych ulegnie zmianie- react wykona ponownie _useEffect_. Przekazanie **pustej** tablicy spowoduje, że hook ten wykona się **tylko raz**
+```
+export const ProductList = () => {
+  const [products, setProducts] = useState<string[]>([]);
+
+  useEffect(() => {
+    console.log('Fetching products');
+    setProducts(['Clothing', 'HouseHold']);
+  }, []);
+
+  return <div>ProductList</div>;
+};
+```
+
+Przekazanie jakiegoś propsa do komponentu _ProductList_ i następnie ustanownienie tego propsa jako zależność dla _useEffect_ spowoduje, że wywoła się on za każdym razem, gdy wartość tego propsa ulegnie zmianie
+
+```
+function App() {
+  const [category, setCategory] = useState('');
+
+  return (
+    <div>
+      <select className='form-select' onChange={(event) => setCategory(event.target.value)}>
+        <option value=''></option>
+        <option value='Clothing'>Clothing</option>
+        <option value='Household'>Household</option>
+      </select>
+      <ProductList category={category}/>
+    </div>
+  );
+}
+
+
+
+
+interface Props {
+  category: string;
+}
+
+export const ProductList = ({category}: Props) => {
+  const [products, setProducts] = useState<string[]>([]);
+
+  useEffect(() => {
+    console.log('Fetching products in ' + category);
+    setProducts(['Clothing', 'HouseHold']);
+  }, [category]);
+
+  return <div>ProductList</div>;
+};
+```
+
+### CleanUp function
+useEffect może zwracać funkcję, która wykona się po zniszczeniu komponentu i powinna być odzwierciedleniem funkcji, którą wykonuje. Np effect pokazujący modal, powinien posiadać cleanup chowający ten modal. 
+
+```
+const connect = () => console.log('Connecting');
+const disconnect = () => console.log('Disconnecting');
+
+useEffect(() => {
+  connect();
+
+  return () => disconnect();
+});
+```
+
+Cleanup function wykona się również, gdy zmienia się zależność hook'a. 

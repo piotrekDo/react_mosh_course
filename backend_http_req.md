@@ -1,4 +1,4 @@
-[Generyczny serwis i implementacja](#generyczny-serwis-i-implementacja)
+[Generyczny serwis i implementacja](#generyczny-serwis-i-implementacja)  
 [Custom Data Fetching Hook](#custom-data-fetching-hook)
 
 <br>
@@ -403,3 +403,82 @@ export default create('/users', apiClient);
 
 
 # Custom Data Fetching Hook
+Custom hook pozwala wydzielić część kodu do innej klasy. Custom hook `useUsers` zarządza więc stanem i efektem, zwracając ewentualne, potrzebne rzeczy z których może skorzystać klasa zainteresowana. Służy to głównie refaktoringowi
+
+```
+import { useEffect, useState } from "react";
+import { CanceledError } from "../services/api-client";
+import userService, { User } from "../services/user-service";
+
+
+const useUsers = () => {
+    const [users, setUsers] = useState<User[]>([]);
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+  
+    useEffect(() => {
+      setIsLoading(true);
+      const { request, cancel } = userService.getAll<User>();
+      request
+        .then(response => {
+          setUsers(response.data);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          if (error instanceof CanceledError) return;
+          setError(error.message);
+          setIsLoading(false);
+        })
+        .finally(() => setIsLoading(false));
+  
+      return () => cancel();
+    }, []);
+
+    return {users, error, isLoading, setUsers, setIsLoading, setError}
+}
+
+export default useUsers;
+```
+
+**Pozwala to odchudzić komponent**
+
+```
+import userService, { User } from './services/user-service';
+import useUsers from './hooks/useUsers';
+
+function App() {
+  const {users, error, isLoading, setUsers, setIsLoading, setError} = useUsers();
+
+  const deleteUser = (user: User) => {
+    const originalUsers = [...users];
+    setUsers(users.filter(u => u.id !== user.id));
+    userService.delete(user.id).catch(err => {
+      console.log(err);
+      setError(err.message);
+      setUsers(originalUsers);
+    });
+  };
+
+  const addUser = () => {
+    const originalUsers = [...users];
+    const newUser = { id: 0, name: 'New user' };
+    setUsers([...users, newUser]);
+    userService
+      .add<User>(newUser)
+      .then(res => setUsers([...users, res.data]))
+      .catch(error => {
+        setError(error.message);
+        setUsers(originalUsers);
+      });
+  };
+
+  const updateUser = (user: User) => {
+    const originalUsers = [...users];
+    const updatedUser = { ...user, name: user.name + '!' };
+    setUsers(users.map(u => (u.id === user.id ? updatedUser : u)));
+    userService.update<User>(user).catch(err => {
+      setError(err.message);
+      setUsers(originalUsers);
+    });
+  };
+```

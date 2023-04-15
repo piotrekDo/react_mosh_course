@@ -48,11 +48,12 @@ export const Form = () => {
 
 ## Biblioteka hookForm
 
-Innym sposobem na tworzenie formularza jest wykorzystanie biblioteki `hookForm`: `nmp install react-hook-form`. Biblioteka udostępnie szereg funkcji umożliwiających zarządzanie formularzem oraz inputami [link](https://react-hook-form.com/get-started/).
+Innym sposobem na tworzenie formularza jest wykorzystanie biblioteki `hookForm`: `nmp install react-hook-form`.  
+Biblioteka udostępnie szereg funkcji umożliwiających zarządzanie formularzem oraz inputami [link](https://react-hook-form.com/get-started/).
 
-Zaczynamy od destrukturyzacji `const { register } = useForm();`
+Zaczynamy od destrukturyzacji `const { register, handleSubmit, reset, formState: {errors} } = useForm();`
 
-- **_register_** : funkcja umożliwiająca dodanie inputa, same inputy dodajemy w postaci `{...register('ID_INPUT'A')}` wskazując na jego ID:
+- **_register_** : funkcja umożliwiająca dodanie inputa, same inputy dodajemy w postaci `{...register('ID_INPUT'A')}` wskazując na jego ID, **atrybut name może wadzić**:
   ```
   <input
   {...register('name')}
@@ -110,8 +111,87 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 ```
 
+#### Pitfalls
+- **_inputy z liczbą - type number_** każdy input zwraca string, niezależnie od typu. Z tego powodu formulrz będzie zgłaszał będy
+  - ustanowić _valueAsNumber: true_ wewnątrz input: `<input {...register('amount', { valueAsNumber: true })} id='amount' type='number'/>`
+  - dla zod dopisać obsługę błedu: `amount: z.number({ invalid_type_error: 'Amount required' }).min().max() I INNE)`
+
 Następnie potrzebny jest `zodResolver` : `import { zodResolver } from '@hookform/resolvers/zod'`
 
 - do `useForm` przekazujemy obiekt resolvera: `useForm<FormData>({resolver: zodResolver(schema)});`
 - Wewnątrz inputów niepotrzebne są reguły walidacyjne `{...(register('name')`~~`{ ,required: true, minLength: 3 }`~~`)}`
 - niepotrzebne są też osobne paragrafy z informacjami o błędach w formularzu, wystarczy jeden : `{errors.name && <p className='text-danger'>{errors.name.message}</p>}` sprawdzane jest wystąpienie pola o ID input- tuaj _name_ a w treści paragrafu odwołanie do `message`.
+
+### Przykład formularza z ZOD oraz useForm:
+```
+import categories from './Categories';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const schema = z.object({
+  description: z
+    .string()
+    .min(3, { message: 'Description should be at least 3 characters' })
+    .max(50, { message: 'Description should be at maximum of 50 characters' }),
+  amount: z
+    .number({ invalid_type_error: 'Amount required' })
+    .min(0.01, { message: 'Amount cannot be less then 0.01' })
+    .max(100_000, { message: 'Amount cannot be grated then 100 000$' }),
+  category: z.enum(categories, {
+    errorMap: () => ({ message: 'Category is required' }),
+  }),
+});
+
+interface Props {
+  onSubmit: (data: ExpenseFormData) => void;
+}
+
+type ExpenseFormData = z.infer<typeof schema>;
+
+export const ExpenseForm = ({ onSubmit }: Props) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<ExpenseFormData>({ resolver: zodResolver(schema) });
+
+  return (
+    <form onSubmit={handleSubmit((data) => {
+        onSubmit(data);
+        reset();
+    })}>
+      <div className='mb-e'>
+        <label htmlFor='description' className='form-label'>
+          Description
+        </label>
+        <input {...register('description')} id='description' type='text' className='form-control' />
+        {errors.description && <p className='text-danger'>{errors.description.message}</p>}
+      </div>
+      <div className='mb-3'>
+        <label htmlFor='amount' className='form-label'>
+          Amount
+        </label>
+        <input {...register('amount', { valueAsNumber: true })} id='amount' type='number' className='form-control' />
+        {errors.amount && <p className='text-danger'>{errors.amount.message}</p>}
+      </div>
+      <div className='mb-3'>
+        <label htmlFor='category' className='form-lablel'>
+          Category
+        </label>
+        <select {...register('category')} id='category' className='form-select'>
+        <option value=""></option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+        {errors.category && <p className='text-danger'>{errors.category.message}</p>}
+      </div>
+      <button className='btn btn-primary'>Submit</button>
+    </form>
+  );
+};
+```

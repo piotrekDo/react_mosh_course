@@ -48,7 +48,7 @@ export const Form = () => {
 
 ## Biblioteka hookForm
 
-Innym sposobem na tworzenie formularza jest wykorzystanie biblioteki `hookForm`: `nmp install react-hook-form`.  
+Innym sposobem na tworzenie formularza jest wykorzystanie biblioteki `hookForm`: `npm install react-hook-form`.  
 Biblioteka udostępnie szereg funkcji umożliwiających zarządzanie formularzem oraz inputami [link](https://react-hook-form.com/get-started/).
 
 Zaczynamy od destrukturyzacji `const { register, handleSubmit, reset, formState: {errors} } = useForm();`

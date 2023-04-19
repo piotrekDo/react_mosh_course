@@ -4,7 +4,7 @@ React jest biblioteką JavaScript, pozwalającą na tworzenie nowoczesnych i dyn
 
 ## Początki
 
-Dla poprawnego diałania React potrzebny jest Node.js. Na chwilę obecną istnieją dwa sposoby na zainicjowanie aplikacji React- oficjalne **Create React APP (CRA)** oraz rosnące w popularności **Vite**. Z pomocą wiersza poleceń, dla vite inicjujemy React komendą `npm create vitte@latest`. Następnie NPM zapyta między innymi o tytuł projektu czy ew. narzędzie, dla nas jest to biblioteka React, następnie _variant_ gdzie zaznaczamy TypeScript (co to jest +SWC??). Jeżeli wszystko przebiegło poprawnie zoabczymy wydruk:
+Dla poprawnego diałania React potrzebny jest Node.js. Na chwilę obecną istnieją dwa sposoby na zainicjowanie aplikacji React- oficjalne **Create React APP (CRA)** oraz rosnące w popularności **Vite**. Z pomocą wiersza poleceń, dla vite inicjujemy React komendą `npm create vite@latest`. Następnie NPM zapyta między innymi o tytuł projektu czy ew. narzędzie, dla nas jest to biblioteka React, następnie _variant_ gdzie zaznaczamy TypeScript (co to jest +SWC??). Jeżeli wszystko przebiegło poprawnie zoabczymy wydruk:
 ```
 Done. Now run:
 

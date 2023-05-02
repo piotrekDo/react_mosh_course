@@ -120,3 +120,190 @@ const useTodos = () => {
 
 export default useTodos;
 ```
+
+# Custom hook
+Tak uzyskany hook warto rozdzielić z logiki komponentu:
+
+```
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Todo } from "./useTodos";
+import axios from "axios";
+import { CACHE_KEY_TODOS } from "../react-query/constants";
+
+export interface AddTodoContext {
+    previousTodos: Todo[];
+  }
+
+const useAddTodo = (onAdd: () => void) => {
+    const queryClient = useQueryClient();
+    return useMutation<Todo, Error, Todo, AddTodoContext>({
+      mutationFn: (todo: Todo) =>
+        axios.post<Todo>('https://jsonplaceholder.typicode.com/todos', todo).then(res => res.data),
+      onMutate: (newTodo: Todo) => {
+        const previousTodos = queryClient.getQueryData<Todo[]>(CACHE_KEY_TODOS) || [];
+        queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, (todos = []) => [newTodo, ...todos]);
+
+        onAdd();
+        return {previousTodos};
+      },
+      onSuccess: (savedTodo, sentTodo) => {
+        queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, todos => todos?.map(todo => todo === sentTodo ? savedTodo : todo))
+       
+      },
+      onError: (error, sentTodo, context) => {
+        if(!context) return;
+        queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, context.previousTodos);
+      }
+    });
+}
+
+export default useAddTodo;
+```
+
+**FORM**
+```
+import { useRef } from 'react';
+import useAddTodo from '../hooks/useAddTodo';
+
+const TodoForm = () => {
+  const ref = useRef<HTMLInputElement>(null);
+  const addTodo = useAddTodo(() => {
+    if(ref.current) ref.current.value = '';
+  });
+
+  return (
+    <>
+    {addTodo.error && <div className="alert alert-danger">{addTodo.error.message}</div>}
+    <form
+      className='row mb-3'
+      onSubmit={event => {
+        event.preventDefault();
+        if (ref.current && ref.current.value) {
+          addTodo.mutate({
+            id: 0,
+            title: ref.current.value,
+            completed: false,
+            userId: 1,
+          });
+        }
+      }}
+    >
+      <div className='col'>
+        <input ref={ref} type='text' className='form-control' />
+      </div>
+      <div className='col'>
+        <button disabled={addTodo.isLoading} className='btn btn-primary'>
+          {addTodo.isLoading ? 'Adding...' : 'Add'}
+        </button>
+      </div>
+    </form>
+    </>
+  );
+};
+
+export default TodoForm;
+```
+
+**A TAKŻE WYDZIELIĆ KLUCZ DO STAŁEJ**
+```
+export const CACHE_KEY_TODOS = ['todos']
+```
+
+# Creating a reusable API client
+Zacząć należy od utworzenia katalogu `services` w którym tworzymy klasę `apiClient.ts`. Klasa taka powinna inicjować konfigurację axios z bazowym URL. Następnie zapisujemy klasę z konkretnymi metodami HTTP, które mogą być potrzebne w ramach funkcjonowania aplikacji. Ważne aby zdefiniować pole `endpoint` pod które będziemy wysyłać żądania. Przy definicji metod powinno się wykorzystać **funkcje strzałkowe** w przeciwnym razie powstanie problem ze słowem `this` i definicją endpointów przekazywanych w konstruktorze klasy. Następnie API będzie potencjalnie potrzebne kilkakrotnie w ramach aplikacji więc tworzymy konkretny serwis np `todoService` i to z niego dostarczmy instancję serwisu do komponentów:
+
+**API CLIENT** odpowiedzialny za stworzenie instancji axios pod jeden konkretny adres, na ogół jeden na całą aplikację, chyba że korzystamy z kilku róznych serwisów.
+```
+import axios from 'axios';
+
+const axiosInstance = axios.create({
+  baseURL: 'https://jsonplaceholder.typicode.com',
+});
+
+class APIClient<T> {
+  endpoint: string;
+
+  constructor(endpoint: string) {
+    this.endpoint = endpoint;
+  }
+
+  getAll = () => {
+    return axiosInstance.get<T[]>(this.endpoint).then(res => res.data);
+  };
+
+  post = (data: T) => {
+    return axiosInstance.post<T>(this.endpoint, data).then(res => res.data);
+  };
+}
+
+export default APIClient;
+```
+
+**TODO Service** odpowiedzialny za stworzenie konkretnego endpointu, może ich zaistnieć kilka np. dla todo, posts, users itd. Dostarcza konkretną instancję API do komponentów. 
+```
+import APIClient from "./apiClient";
+
+export interface Todo {
+    id: number;
+    title: string;
+    userId: number;
+    completed: boolean;
+  }
+
+export default new APIClient<Todo>('/todos');
+```
+
+**Konkretne hooki** odpowiedzialne za metody HTTP na konkretnych endpointach, będzie ich najwięcej w ramach całej aplikacji
+
+Hook pobierający dane
+```
+import { useQuery } from "@tanstack/react-query";
+import todoService, { Todo } from "../react-query/services/todoService";
+import { CACHE_KEY_TODOS } from "../react-query/constants";
+
+const useTodos = () => {
+    return useQuery<Todo[], Error>({
+        queryKey: CACHE_KEY_TODOS,
+        queryFn: todoService.getAll,
+        staleTime: 10 * 1000 //10sec
+      });
+}
+
+export default useTodos;
+```
+
+Hook wysyłający dane
+```
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CACHE_KEY_TODOS } from '../react-query/constants';
+import todoService, { Todo } from '../react-query/services/todoService';
+
+export interface AddTodoContext {
+  previousTodos: Todo[];
+}
+
+const useAddTodo = (onAdd: () => void) => {
+  const queryClient = useQueryClient();
+  return useMutation<Todo, Error, Todo, AddTodoContext>({
+    mutationFn: todoService.post,
+    onMutate: (newTodo: Todo) => {
+      const previousTodos = queryClient.getQueryData<Todo[]>(CACHE_KEY_TODOS) || [];
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, (todos = []) => [newTodo, ...todos]);
+
+      onAdd();
+      return { previousTodos };
+    },
+    onSuccess: (savedTodo, sentTodo) => {
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, todos =>
+        todos?.map(todo => (todo === sentTodo ? savedTodo : todo))
+      );
+    },
+    onError: (error, sentTodo, context) => {
+      if (!context) return;
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, context.previousTodos);
+    },
+  });
+};
+
+export default useAddTodo;
+```

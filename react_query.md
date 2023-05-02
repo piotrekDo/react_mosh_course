@@ -166,6 +166,213 @@ const useTodos = () => {
 export default useTodos;
 ```
 
+## Żądania parametryzowane
+Chcąc pobrać zmodyfikowane dane, np posty dla konkretnego użytkownika zamiast wszystkich postów musimy do hooka przekazać parametr, np. w postaci ID użytkownika pobierane z firmularza.
+```
+const PostList = () => {
+  const [userId, setUserId] = useState<number>();
+  const { data: posts, error, isLoading } = usePosts(userId);
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <select onChange={event => setUserId(+event.target.value)} className='form-select mb-4' value={userId}>
+        <option value=''></option>
+        <option value='1'>User 1</option>
+        <option value='2'>User 2</option>
+        <option value='3'>User 3</option>
+      </select>
+      <ul className='list-group'>
+        {posts?.map(post => (
+          <li key={post.id} className='list-group-item'>
+            {post.title}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+};
+```
+
+**Modyfikujemy hook**:
+```
+const usePosts = (userId: number | undefined) => {
+  const fetchPosts = () => {
+    return axios
+    .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+        params: {
+            userId
+        }
+    })
+    .then(res => res.data);
+  };
+
+  return useQuery<Post[], Error>({
+    queryKey: userId ? ['users', userId, 'posts'] : ['posts'],
+    queryFn: fetchPosts,
+  });
+};
+```
+
+Wymaga to zmiany klucza, do tej pory był to jedynie 'posts'. W tej sytuacji odpowiada on strukturze zapytania.
+/users/1/posts
+
+## Paginacja
+Paginacja jest ściśle powiązana z API i nie jest czymś serwowanym przez React Query. Konkretna immplementacja zależy więc od serwisu. JsonPlaceholder w przykładzie nie oferuje np. obiektu Page, z którego wynika ile mamy danych, ile stron itd. implementacja logiki dostosowana jest do serwisu. Do hooka trzeba przekazać informacje o stronie na którą przechodzimy. Dodatkwo hook przyjmuje teraz ustawienie `keepPreviousData` zwiększające płynność działania aplikacji, bez niego strona będzie _skakała_ na górę przy odświeżeniu danych.
+
+```
+import { useState } from 'react';
+import usePosts from '../hooks/usePosts';
+
+const PostList = () => {
+  const pageSize = 10;
+  const [page, setPage] = useState<number>(1)
+  const { data: posts, error, isLoading } = usePosts({page, pageSize});
+
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <ul className='list-group'>
+        {posts?.map(post => (
+          <li key={post.id} className='list-group-item'>
+            {post.title}
+          </li>
+        ))}
+      </ul>
+      <button disabled={page ===1} className="btn btn-primary" onClick={() => setPage(page -1)}>Previous</button>
+      <button className="btn btn-primary" onClick={() => setPage(page +1)}>Next</button>
+    </>
+  );
+};
+
+export default PostList;
+```
+
+**ORAZ HOOK**
+```
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+
+export interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+export interface PostQuery {
+    page: number;
+    pageSize: number;
+}
+
+const usePosts = (query: PostQuery) => {
+  const fetchPosts = () => {
+    return axios
+    .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+        params: {
+            _start: (query.page -1) * query.pageSize,
+            _limit: query.pageSize
+        }
+    })
+    .then(res => res.data);
+  };
+
+  return useQuery<Post[], Error>({
+    queryKey: ['posts', query],
+    queryFn: fetchPosts,
+    keepPreviousData: true
+  });
+};
+
+export default usePosts;
+```
+
+## Infinite Query
+Polega na dociąganiu kolejnych porcji danych, w tym przypadku na przycisk. Można to osiągnąć poprzez scroll.
+Wymaga zmiany hooka z `useQuery` na `useInfiniteQuery` oraz zaimplementowania funkcji dodającą nowe dane do strony. Jej implementacja ponownie zależy od serwisu. JsonPlaceHolder w przypadku osiągnięcia końca paginacji zwraca pustą tablicę. Przyzwoite API powinno zwracać całkowitą ilość rekordów, stron więc można to obliczyć w lepszy sposób. `useInfiniteQuery` zwraca inny zestaw propsów, np. funkcję `fetchNextPage` wykorzystywaną do pobrania kolejnej strony. Zmienia się też sposób renderowania danych. Wcześniej wyświetlana była tylko jedna strona, teraz zwracana jest tablica wielowymiarowa z kolejnymi stronami, każdą należy renderować osobno. 
+
+```
+import usePosts from '../hooks/usePosts';
+import React from 'react';
+
+const PostList = () => {
+  const pageSize = 10;
+  const { data: posts, error, isLoading, fetchNextPage, isFetchingNextPage } = usePosts({ pageSize });
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <ul className='list-group'>
+        {posts.pages.map((page, index) => (
+          <React.Fragment key={index}>
+            {page.map(post => (
+              <li key={post.id} className='list-group-item'>
+                {post.title}
+              </li>
+            ))}
+          </React.Fragment>
+        ))}
+      </ul>
+      <button disabled={isFetchingNextPage} className='btn btn-primary' onClick={() => fetchNextPage()}>
+        {isFetchingNextPage ? 'Loading...' : 'Load More'}
+      </button>
+    </>
+  );
+};
+
+export default PostList;
+```
+**HOOK**
+```
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import axios from 'axios';
+
+export interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+export interface PostQuery {
+  pageSize: number;
+}
+
+const usePosts = (query: PostQuery) => {
+  return useInfiniteQuery<Post[], Error>({
+    queryKey: ['posts', query],
+    queryFn: ({pageParam = 1}) => {
+        return axios
+          .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+            params: {
+              _start: (pageParam - 1) * query.pageSize,
+              _limit: query.pageSize,
+            },
+          })
+          .then(res => res.data);
+      },
+    keepPreviousData: true,
+    getNextPageParam: (lastPage, allPages) => {
+      // 1 -> 2
+      return lastPage.length > 0 ? allPages.length + 1 : undefined;
+    },
+  });
+};
+
+export default usePosts;
+```
+
+
 ## React Qiuery DevTools
 `npm i @tanstack/react-query-devtools` w kursie `npm i @tanstack/react-query-devtools@4.28`
 

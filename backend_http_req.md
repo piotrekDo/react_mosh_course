@@ -226,6 +226,7 @@ export default axios.create({
 export {CanceledError};
 ```
 
+
 Następnie w zainteresowanej klasie:
 ```
 import apiClient, { CanceledError } from './services/api-client';

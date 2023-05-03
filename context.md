@@ -148,3 +148,6 @@ const useAuth = () => useContext(AuthContext)
 
 export default useAuth;
 ```
+
+## Context vs Redux
+Redux jest szeroko stosowaną biblioteką do zarządzania stanem danych. Dostarcza scentralizowaną przestrzeń do zarządzania i współdzielenia danych. Zamiast przechowywać stan w komponencie przechowywany jest on globalnie w Redux. 

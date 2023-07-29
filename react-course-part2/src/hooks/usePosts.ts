@@ -15,16 +15,16 @@ export interface PostQuery {
 const usePosts = (query: PostQuery) => {
   return useInfiniteQuery<Post[], Error>({
     queryKey: ['posts', query],
-    queryFn: ({pageParam = 1}) => {
-        return axios
-          .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
-            params: {
-              _start: (pageParam - 1) * query.pageSize,
-              _limit: query.pageSize,
-            },
-          })
-          .then(res => res.data);
-      },
+    queryFn: ({ pageParam = 1 }) => {
+      return axios
+        .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+          params: {
+            _start: (pageParam - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then(res => res.data);
+    },
     keepPreviousData: true,
     getNextPageParam: (lastPage, allPages) => {
       // 1 -> 2
@@ -34,3 +34,4 @@ const usePosts = (query: PostQuery) => {
 };
 
 export default usePosts;
+

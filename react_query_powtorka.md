@@ -1,0 +1,146 @@
+# Powtórka z React Query
+
+React Qury to biblioteka upraszczająca proces pobierania i wysyłania danych oraz _cachowania_. Udostępnia dwa główne hooki- `useQuery` oraz `useMutation`.
+
+**Caching** to proces przechowaywania danych w miejscu, gdzie są one szybko i łatwo dostępne dla aplikacji. Dzięki temu można przechowaywać w przeglądarce często wykorzystywane dane bez potrzeby wysyłania zapytań HTTP każdorazowo.
+
+## Setup
+
+`npm i @tanstack/react-query` w kursie `npm i @tanstack/react-query@4.21`
+
+**Wewnątrz Main.tsx**  
+`import { QueryClient, QueryClientProvider } from '@tanstack/react-query';`
+Stworzyć instancję queryClient, owrapować aplikację providerem:
+
+```
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+```
+
+## Custom query hook i API
+
+## React Query DevTools
+
+`npm i @tanstack/react-query-devtools` w kursie `npm i @tanstack/react-query-devtools@4.28`  
+**Wewnątrz main.ts** `import { ReactQueryDevtools } from '@tanstack/react-query-devtools';`  
+Komponent _DevTools_ dodajemy po aplikacji, wewnątrz `QueryClientProvider`
+
+```
+const queryClient = new QueryClient();
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+      <ReactQueryDevtools/>
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+```
+
+Po dodaniu devtools do projektu, widac w lewym, dolnym rogu ikonę devtools
+
+## Podstawy: Pobieranie danych
+
+Do pobierania dancych wykorzystywany jest hook `useQuery` przyjmujący 2 parametry:
+
+- **_klucz_** unikalny, wykorzystywany w _caching_. Zapisywany w postaci tablicy z jedną lub więcej wartośći. Pierwszą jest an ogół string, opisujący dane.
+- **_funkcja pobierająca dane_** odpowiada za pobranie danych, musi zwracać `Promise`
+  Funkcja poniżej zwraca `Promise` od tablicy Todo, w chwili jego rozwiązania, dane zostaną zapisane w Cache.
+
+```
+const fetchTodos = () =>
+  axios
+  .get<Todo[]>('https://jsonplaceholder.typicode.com/todos')
+  .then(res => res.data)
+
+const query = useQuery({
+  queryKey: ['todos'],
+  queryFn:
+})
+```
+
+Hook `useQuery` zwróci obiekt zawierający szereg wartośći jak `data`, `isLoading`, `error` i wiele innych. Tak zapisane `useQuery` **zapewnia auto re-try** jak również auro refresh po określonym czasie.
+
+### Errors / Loading
+
+Hook `useQuery` zwraca obiekt zawierający pros `error` do którego można się odwołać przy obsłudze błędów. Dla poprawnego działania hooka należy zdefiniować typ error, który może wystąpić, **dla Axios jest to interface Error** stosowany w przeglądarkach, i udostępnia wartośći jak `cause, message, name`.
+
+Do wyświetlania loading wykorzystujemy props `isLoading`, do którego można się odnieść w komponencie.
+
+Poprawiony zapis hooka wygląda następująco:
+
+```
+const fetchTodos = () =>
+  axios
+  .get<Todo[]>('https://jsonplaceholder.typicode.com/todos')
+  .then(res => res.data)
+
+const {data: todos, error, isLoading} = useQuery<Todo[], Error>({
+  queryKey: ['todos'],
+  queryFn:
+})
+```
+
+### Ustawienia `useQuery`
+
+Podczas tworzenia `QueryClient` można przekazać obiekt zawierający ustawienia nadpisujące domyślne.
+
+```
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      cacheTime: 300_000,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true
+    }
+  }
+});
+```
+
+- **cacheTime** oznacza czas przechowywania danych w sytuacji, gdzie nie są one obserwowane przez żaden komponent przez X czasu. Obserwujący komponent to komponent _zamontowany_, wykorzystujący dane z hooka.
+- **staleTime** oznacza czas przez jaki dane są uznawane za _świeże_. Domyślną wartością jest 0, oznaczające, że ReactQuery zawsze będzie pobierał nowe dane. **ReactQuery automatycznie odświeża takie dane** w 3 przypadkach
+  - przy ponowieniu połączenia internetowego,
+  - gdy komponent jest tworzony,
+  - gdy okno przeglądarki jest _refocused_ (przełączane)
+- Kolejne trzy ustawienia zarządzają powyższym zachowaniem: `refetchOnWindowFocus`, `refetchOnReconnect`, `refetchOnMount`.
+
+**Wszystkie ustawiania można nadpisać w konkretnych `useQuery`**
+
+```
+const useTodos = () => {
+    return useQuery<Todo[], Error>({
+        queryKey: ['todos],
+        queryFn: todoService.getAll,
+        staleTime: 10 * 1000 //10sec
+      });
+}
+```
+
+### Żądania parametryzowane oraz zaawansowane klucze
+Stosuje się je przy przekazywaniu parametru do budowy hooka:  
+`  const {data, error, isLoading} = usePosts(userId);`  
+Następnie należy zmodyfikować sam hook aby przyjmował parametr, tutaj również zmianie ulegnie klucz. Konwencją jest zapis zgodny z url backendu, np. '/users/1/posts. Klucz powinien przyjmować więc 3 wartości. Zasada działania takiej tablicy klucza jest podobna do zależności w `useEffect`- gdy jedna z wartości ulegnie zmienie, nowe dane zostaną pobrane. 
+```
+const usePosts = (userId: number | undefined) =>
+  useQuery<Post[], Error>({
+    queryKey: ['users', userId, 'posts'],
+    queryFn: () => 
+    axios
+      .get<Post[]>('https://jsonplaceholder.typicode.com/posts', 
+        params: {
+          userId
+        })
+      .then(res => res.data),
+    staleTime: 1 * 60 * 1000,
+  });
+```

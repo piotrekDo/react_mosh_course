@@ -144,3 +144,84 @@ const usePosts = (userId: number | undefined) =>
     staleTime: 1 * 60 * 1000,
   });
 ```
+
+### Paginacja
+Zapisując hook dobrym podejściem jest zdefiniowanie interfejsu określającego _query_, zawierające numer strony oraz jej rozmiar. Trzeba też przetrzymywać te dane wewnątrz komponentu w `useState`. Nie jest to wymóg `reactQuery` ale jeden ze sposóbów na osiągnięcie paginacji.   
+**keepPreviousData** pozwala na uzyskanie lepszego doświadczenia poprzez wyświetlanie obecnych danych do czasu uzyskania kolejnych. Jednocześnie należy się odwoływać do `isFetching` zamiast isLoading!
+  
+**HOOK**  
+  
+```
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+
+export interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+export interface PostQuery {
+  page: number;
+  pageSize: number;
+}
+
+const usePostsPagination = (query: PostQuery) => {
+  return useQuery<Post[], Error>({
+    queryKey: ['posts', query],
+    queryFn: () => {
+      return axios
+        .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+          params: {
+            _start: (query.page - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then(res => res.data);
+    },
+    staleTime: 1 * 60 * 1000, // 1mminuta
+    keepPreviousData: true,
+  });
+};
+
+export default usePostsPagination;
+```
+  
+**Komponent**
+    
+```
+import { useState } from 'react';
+import usePostsPagination from '../hooks/usePostsPagination';
+
+const PostListPagination = () => {
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
+  const { data: posts, error, isLoading } = usePostsPagination({ pageSize, page });
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <ul className='list-group'>
+        {posts.map(post => (
+          <li key={post.id} className='list-group-item'>
+            {post.title}
+          </li>
+        ))}
+      </ul>
+      <button onClick={() => setPage(page - 1)} disabled={page === 1} className='btn btn-primary'>
+        Previous
+      </button>
+      <button onClick={() => setPage(page + 1)} className='btn btn-primary'>
+        Next
+      </button>
+    </>
+  );
+};
+
+export default PostListPagination;
+
+```

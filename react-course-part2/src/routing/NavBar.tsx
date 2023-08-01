@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const NavBar = () => {
   return (
@@ -18,6 +18,11 @@ const NavBar = () => {
             <li className='nav-item'>
               <NavLink to='/users' className='nav-link'>
                 Users
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to='/post-pagination' className='nav-link'>
+                Paginacja zwykła
               </NavLink>
             </li>
           </ul>

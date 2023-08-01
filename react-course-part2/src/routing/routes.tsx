@@ -5,6 +5,7 @@ import ContactPage from './ContactPage';
 import UserDetailPage from './UserDetailPage';
 import Layout from './Layout';
 import ErrorPage from './ErrorPage';
+import PostListPagination from './PostListPagination';
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { path: '', element: <HomePage /> },
       { path: 'users', element: <UserListPage />, children: [{ path: ':id', element: <UserDetailPage /> }] },
       { path: 'contact', element: <ContactPage /> },
+      { path: '/post-pagination', element: <PostListPagination />}
     ],
   },
 ]);

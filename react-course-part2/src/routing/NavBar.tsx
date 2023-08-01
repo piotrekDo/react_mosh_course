@@ -7,7 +7,7 @@ const NavBar = () => {
         <NavLink to='/' className='navbar-brand'>
           My App
         </NavLink>
-        <div className='collapse navbar-collapse' id='navbarNav'>
+        <div className=' navbar-collapse' id='navbarNav'>
           <ul className='navbar-nav'>
             <li className='nav-item'>
               <NavLink to='/' 
@@ -23,6 +23,11 @@ const NavBar = () => {
             <li>
               <NavLink to='/post-pagination' className='nav-link'>
                 Paginacja zwykła
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to='/post-pagination-infinite' className='nav-link'>
+                Paginacja infinite
               </NavLink>
             </li>
           </ul>

@@ -225,3 +225,87 @@ const PostListPagination = () => {
 export default PostListPagination;
 
 ```
+
+### Infinite Query (na przycisk _load more_) && endless scroll
+W odróznieniu od zwykłej paginacji, przy _infinite query_ stosujemy hook `useInfiniteQuery`. Nie prowadzimy też już rejestru obecnej strony. Zamiast tego należy dopisywać kolejne dane do już wcześniej pobranych i wyświetlać całość. Wewnątrz `useInfiniteQuery` należy zaimplementować funcję `getNextPageParam` odpowiedzialną za określanie czy istnieją kolejne dane do pobrania **w skrócie, zwraca kolejny numer strony**. Problematyczny staje się koniec listy, zależny od implementacji po stronie backend. `getNextPageParam` zwraa ostatnią stronę, więc w rzeczywistości mamy dostęp do danych, generowanych przez springowe `Page`. Przy naciśnięciu `load more` React wywoła tę funkcję i przekaże jej wynik do `queryFn`, stąd musi ona przyjmować dodatkowy parametr. Można go zdestrukturyzować do postaci `pageParam` i zainicjować jako 1 co wywoła pierwszą stronę.
+
+```
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+
+export interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+export interface PostQuery {
+  pageSize: number;
+}
+
+const usePostPaginationInfiniteQuery = (query: PostQuery) => {
+  return useInfiniteQuery<Post[], Error>({
+    queryKey: ['posts', query],
+    queryFn: ({ pageParam = 1 }) => {
+      return axios
+        .get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
+          params: {
+            _start: (pageParam - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then(res => res.data);
+    },
+    staleTime: 1 * 60 * 1000, // 1mminuta
+    keepPreviousData: true,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length > 0 ? allPages.length + 1 : undefined;
+    },
+  });
+};
+
+export default usePostPaginationInfiniteQuery;
+
+```
+  
+Wewnątrz komponentu w ramach hooka, pobieramy dodatkowo funkcję `fetchNextPage` udostępnianą przez `useInfiniteQuery` i przypisujemy ją do przycisku _Load more_. Zwracane dane nie zawierają już poprostu tablicy Posts. `useInfiniteQuery` zwraca obiekt `InfiniteData<Post[]>` zawierający parametry `pages` oraz `pageParams`. Pages zawiera teraz konkretne strony, zawierające posty które trzeba wyrenderować z osobna. Niestety JS domyślnie nie posiada funkcji `flatMap`. Trzeba więc mapować każdą stronę z postami, owrapowaną we Fragment i wewnątrz niego dopiero renderować konkretne posty. 
+
+```
+import { Fragment } from 'react';
+import usePostPaginationInfiniteQuery from '../hooks/usePostPaginationInfiniteQuery';
+
+const PostListPaginationInfinite = () => {
+  const pageSize = 10;
+  const { data, error, isLoading, isFetching, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    usePostPaginationInfiniteQuery({
+      pageSize,
+    });
+
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <ul className='list-group'>
+        {data.pages.map((page, index) => (
+          <Fragment key={index}>
+            {page.map(post => (
+              <li key={post.id} className='list-group-item'>
+                {post.title}
+              </li>
+            ))}
+          </Fragment>
+        ))}
+      </ul>
+      <button disabled={isFetchingNextPage || !hasNextPage} onClick={() => fetchNextPage()} className='btn btn-primary'>
+        {!isFetchingNextPage ? 'Load more' : 'Loading...'}
+      </button>
+    </>
+  );
+};
+
+export default PostListPaginationInfinite;
+
+```

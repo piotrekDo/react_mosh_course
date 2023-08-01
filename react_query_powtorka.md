@@ -309,3 +309,113 @@ const PostListPaginationInfinite = () => {
 export default PostListPaginationInfinite;
 
 ```
+
+### Infinite scroll
+Do zaimplementowania inifinite scroll należy skorzystać z [biblioteki](https://www.npmjs.com/package/react-infinite-scroll-component).
+`npm install --save react-infinite-scroll-component`  
+Następnie wystarczy owrapować kod odpowiedzialny za wyświetlanie treści w tag `<InfiniteScroll>` zaimportowany jako `import InfiniteScroll from 'react-infinite-scroll-component';`.
+Sam tak wymaga przekazania kilku konfiguracji:
+```
+    <InfiniteScroll 
+      dataLength={fetchedGamesCount}
+      hasMore={!!hasNextPage}
+      next={() => fetchNextPage()}
+      loader ={<Spinner />}>
+```
+- `dataLength` oznacza ilość już pobranych danych, można wykorzystać funkcję reduce: `const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.results.length, 0) || 0;` Konieczny jest dodatkowy warunek `|| 0` ponieważ reduce może zwrócić undefined, którego nie akceptuje funkcja. Musimy przekazać jakąś wartość liczbową.
+- `hasMore` można przypisać do `hasNextPage` pochodzącego z `useInfiniteQuery` tutaj koniecznie bang operator, ponieważ również może pojawić się undefined. 
+-  `next` oczekuje funkcji dociągającej kolejne dane. Ponownie nada się funkcja z `useInfiniteQuery`
+- `loader` oczekuje spinnera albo skeleton. 
+
+```
+import { useInfiniteQuery } from '@tanstack/react-query';
+import APIClient, { FetchResponse } from '../services/apiClient';
+import { Platform } from './usePlatforms';
+import { GameQuery } from '../App';
+
+export interface Game {
+  id: number;
+  name: string;
+  background_image: string;
+  parent_platforms: { platform: Platform }[];
+  metacritic: number;
+  rating_top: number;
+}
+
+const apiClient = new APIClient<Game>('/games');
+
+const useGames = (gameQuery: GameQuery) =>
+  useInfiniteQuery<FetchResponse<Game>, Error>({
+    queryKey: ['games', gameQuery],
+    queryFn: ({pageParam =1}) => {
+      return apiClient.getAll({
+        params: {
+          genres: gameQuery.genre?.id,
+          parent_platforms: gameQuery.platform?.id,
+          ordering: gameQuery.sortOrder,
+          search: gameQuery.searchTag,
+          page: pageParam
+        },
+      });
+    },
+    keepPreviousData: true,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.next ? allPages.length + 1 : undefined;
+    }
+  });
+
+export default useGames;
+```
+
+**KOMPONENT**
+```
+import { SimpleGrid, Spinner, Text } from '@chakra-ui/react';
+import useGames from '../hooks/useGames';
+import { GameCard } from './GameCard';
+import { GameCardSkeleton } from './GameCardSkeleton';
+import { GameCardContainer } from './GameCardContainer';
+import { GameQuery } from '../App';
+import React from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
+
+interface Props {
+  gameQuery: GameQuery;
+}
+
+export const GameGrid = ({ gameQuery }: Props) => {
+  const { data, error, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useGames(gameQuery);
+  const skeletons = [1, 2, 3, 4, 5, 6];
+
+  if (error) return <Text>{error.message}</Text>;
+
+const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.results.length, 0) || 0;
+
+  return (
+    <>
+    <InfiniteScroll 
+      dataLength={fetchedGamesCount}
+      hasMore={!!hasNextPage}
+      next={() => fetchNextPage()}
+      loader ={<Spinner />}>
+      <SimpleGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} padding='10px' spacing={6}>
+        {isLoading &&
+          skeletons.map(skeleton => (
+            <GameCardContainer key={skeleton}>
+              <GameCardSkeleton />
+            </GameCardContainer>
+          ))}
+        {data?.pages.map((page, index) => (
+          <React.Fragment key={index}>
+            {page.results.map(game => (
+              <GameCardContainer key={game.id}>
+                <GameCard game={game} />
+              </GameCardContainer>
+            ))}
+          </React.Fragment>
+        ))}
+      </SimpleGrid>
+      </InfiniteScroll>
+    </>
+  );
+};
+```

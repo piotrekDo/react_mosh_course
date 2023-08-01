@@ -7,7 +7,6 @@ import Layout from './Layout';
 import ErrorPage from './ErrorPage';
 import PostListPagination from './PostListPagination';
 import PostListPaginationInfinite from './PostListPaginationInfinite';
-
 const router = createBrowserRouter([
   {
     path: '/',

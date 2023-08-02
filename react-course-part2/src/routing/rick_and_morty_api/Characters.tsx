@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useCharacters from './useCharacters';
 import { PaginationBar } from './PaginationBar';
+import { CharacterCard } from './CharacterContainer';
 
 export const Characters = () => {
   const [page, setPage] = useState(1);
@@ -11,15 +12,17 @@ export const Characters = () => {
   if (error) return <p>{error.message}</p>;
 
   return (
-    <>
-      <ul className='list-group'>
-        {data.results.map(character => (
-          <li key={character.id} className='list-group-item'>
-            {character.name}
-          </li>
-        ))}
-      </ul>
-      <PaginationBar currentPage={page} info={data.info} switchPage={setPage}/>
-    </>
+    <div style={{width: '100%'}}>
+      <div className='container'>
+        <div className='row'>
+          {data.results.map(character => (
+            <div className='col-sm' key={character.id}>
+              <CharacterCard character={character} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <PaginationBar currentPage={page} info={data.info} switchPage={setPage} />
+    </div>
   );
 };

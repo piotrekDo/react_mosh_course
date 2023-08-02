@@ -20,26 +20,28 @@ export const PaginationBar = ({ currentPage, info, switchPage }: Props) => {
   const range = Array.from({ length: Math.min(pagess, 11) }, (_, index) => index + start);
 
   return (
-    <div className='bg-info'>
-      <button disabled={currentPage < 2} onClick={() => switchPage(1)} className='btn btn-primary'>
+    <div className='bg-info d-flex justify-content-center mt-4 p-2'>
+      <button disabled={currentPage < 2} onClick={() => switchPage(1)} className='btn btn-primary mx-1'>
         first
       </button>
-      <button className='btn btn-primary' disabled={currentPage < 2} onClick={() => switchPage(currentPage - 1)}>
+      <button className='btn btn-primary mx-1' disabled={currentPage < 2} onClick={() => switchPage(currentPage - 1)}>
         prev
       </button>
-      {range.map(pageNumber => (
-        <span key={pageNumber} onClick={() => switchPage(pageNumber)}>
-          {pageNumber === currentPage ? <strong>{pageNumber}</strong> : pageNumber}{' '}
-        </span>
-      ))}
+      <div className="d-flex align-items-center">
+        {range.map((pageNumber) => (
+          <span key={pageNumber} style={{cursor: 'pointer'}} onClick={() => switchPage(pageNumber)}>
+            {pageNumber === currentPage ? <strong>{pageNumber}</strong> : pageNumber}
+          </span>
+        ))}
+      </div>
       <button
-        className='btn btn-primary'
+        className='btn btn-primary mx-1'
         disabled={currentPage > pagess - 1}
         onClick={() => switchPage(currentPage + 1)}
       >
         next
       </button>
-      <button className='btn btn-primary' disabled={currentPage > pagess - 1} onClick={() => switchPage(pagess)}>
+      <button className='btn btn-primary mx-1' disabled={currentPage > pagess - 1} onClick={() => switchPage(pagess)}>
         last
       </button>
     </div>

@@ -29,6 +29,11 @@ const NavBar = () => {
                 Paginacja infinite
               </NavLink>
             </li>
+            <li>
+              <NavLink to='/rick-and-morty-characters' className='nav-link'>
+                Rick and Morty postaci
+              </NavLink>
+            </li>
           </ul>
         </div>
       </div>

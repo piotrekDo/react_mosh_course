@@ -1,60 +1,27 @@
-import userService, { User } from './services/user-service';
-import useUsers from './hooks/useUsers';
+import { useState } from 'react';
+import SomeList from './components/SomeList';
+import { FormHook } from './components/FormHook';
 
 function App() {
-  const {users, error, isLoading, setUsers, setIsLoading, setError} = useUsers();
-
-  const deleteUser = (user: User) => {
-    const originalUsers = [...users];
-    setUsers(users.filter(u => u.id !== user.id));
-    userService.delete(user.id).catch(err => {
-      console.log(err);
-      setError(err.message);
-      setUsers(originalUsers);
-    });
-  };
-
-  const addUser = () => {
-    const originalUsers = [...users];
-    const newUser = { id: 0, name: 'New user' };
-    setUsers([...users, newUser]);
-    userService
-      .add<User>(newUser)
-      .then(res => setUsers([...users, res.data]))
-      .catch(error => {
-        setError(error.message);
-        setUsers(originalUsers);
-      });
-  };
-
-  const updateUser = (user: User) => {
-    const originalUsers = [...users];
-    const updatedUser = { ...user, name: user.name + '!' };
-    setUsers(users.map(u => (u.id === user.id ? updatedUser : u)));
-    userService.update<User>(user).catch(err => {
-      setError(err.message);
-      setUsers(originalUsers);
-    });
-  };
+  const [page, setPage] = useState<'form' | 'list'>('form');
+  const selectedClasses = 'btn btn-primary mx-2 w-25';
+  const notSelectedClasses = 'btn btn-secondary mx-2 w-25';
 
   return (
-    <>
-      {isLoading && <div className='spinner-border'></div>}
-      {error && <p className='text-danger'>{error}</p>}
-      <button className='btn btn-primary mb-3' onClick={addUser}>
-        Add
-      </button>
-      <ul className='list-group'>
-        {users.map(user => (
-          <li key={user.id} className='list-group-item d-flex justify-content-between'>
-            {user.name}{' '}
-            <button className='btn btn-outline-danger' onClick={() => deleteUser(user)}>
-              Ddelete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </>
+    <div style={{ width: '100%', height: '90vh' }}>
+      <div style={{ width: '100%', height: '50px', display: 'flex', justifyContent: 'center' }}>
+        <button onClick={() => setPage('form')} className={page === 'form' ? selectedClasses : notSelectedClasses}>
+          Formularz
+        </button>
+        <button onClick={() => setPage('list')} className={page === 'list' ? selectedClasses : notSelectedClasses}>
+          Lista
+        </button>
+      </div>
+      <div className='mt-5'>
+        {page === 'list' && <SomeList />}
+        {page === 'form' && <FormHook />}
+      </div>
+    </div>
   );
 }
 

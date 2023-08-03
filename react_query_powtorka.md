@@ -127,16 +127,18 @@ const useTodos = () => {
 ```
 
 ### Żądania parametryzowane oraz zaawansowane klucze
+
 Stosuje się je przy przekazywaniu parametru do budowy hooka:  
 `  const {data, error, isLoading} = usePosts(userId);`  
-Następnie należy zmodyfikować sam hook aby przyjmował parametr, tutaj również zmianie ulegnie klucz. Konwencją jest zapis zgodny z url backendu, np. '/users/1/posts. Klucz powinien przyjmować więc 3 wartości. Zasada działania takiej tablicy klucza jest podobna do zależności w `useEffect`- gdy jedna z wartości ulegnie zmienie, nowe dane zostaną pobrane. 
+Następnie należy zmodyfikować sam hook aby przyjmował parametr, tutaj również zmianie ulegnie klucz. Konwencją jest zapis zgodny z url backendu, np. '/users/1/posts. Klucz powinien przyjmować więc 3 wartości. Zasada działania takiej tablicy klucza jest podobna do zależności w `useEffect`- gdy jedna z wartości ulegnie zmienie, nowe dane zostaną pobrane.
+
 ```
 const usePosts = (userId: number | undefined) =>
   useQuery<Post[], Error>({
     queryKey: ['users', userId, 'posts'],
-    queryFn: () => 
+    queryFn: () =>
     axios
-      .get<Post[]>('https://jsonplaceholder.typicode.com/posts', 
+      .get<Post[]>('https://jsonplaceholder.typicode.com/posts',
         params: {
           userId
         })
@@ -146,11 +148,12 @@ const usePosts = (userId: number | undefined) =>
 ```
 
 ### Paginacja
-Zapisując hook dobrym podejściem jest zdefiniowanie interfejsu określającego _query_, zawierające numer strony oraz jej rozmiar. Trzeba też przetrzymywać te dane wewnątrz komponentu w `useState`. Nie jest to wymóg `reactQuery` ale jeden ze sposóbów na osiągnięcie paginacji.   
+
+Zapisując hook dobrym podejściem jest zdefiniowanie interfejsu określającego _query_, zawierające numer strony oraz jej rozmiar. Trzeba też przetrzymywać te dane wewnątrz komponentu w `useState`. Nie jest to wymóg `reactQuery` ale jeden ze sposóbów na osiągnięcie paginacji.  
 **keepPreviousData** pozwala na uzyskanie lepszego doświadczenia poprzez wyświetlanie obecnych danych do czasu uzyskania kolejnych. Jednocześnie należy się odwoływać do `isFetching` zamiast isLoading!
-  
-**HOOK**  
-  
+
+**HOOK**
+
 ```
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -187,9 +190,9 @@ const usePostsPagination = (query: PostQuery) => {
 
 export default usePostsPagination;
 ```
-  
+
 **Komponent**
-    
+
 ```
 import { useState } from 'react';
 import usePostsPagination from '../hooks/usePostsPagination';
@@ -227,6 +230,7 @@ export default PostListPagination;
 ```
 
 ### Infinite Query (na przycisk _load more_) && endless scroll
+
 W odróznieniu od zwykłej paginacji, przy _infinite query_ stosujemy hook `useInfiniteQuery`. Nie prowadzimy też już rejestru obecnej strony. Zamiast tego należy dopisywać kolejne dane do już wcześniej pobranych i wyświetlać całość. Wewnątrz `useInfiniteQuery` należy zaimplementować funcję `getNextPageParam` odpowiedzialną za określanie czy istnieją kolejne dane do pobrania **w skrócie, zwraca kolejny numer strony**. Problematyczny staje się koniec listy, zależny od implementacji po stronie backend. `getNextPageParam` zwraa ostatnią stronę, więc w rzeczywistości mamy dostęp do danych, generowanych przez springowe `Page`. Przy naciśnięciu `load more` React wywoła tę funkcję i przekaże jej wynik do `queryFn`, stąd musi ona przyjmować dodatkowy parametr. Można go zdestrukturyzować do postaci `pageParam` i zainicjować jako 1 co wywoła pierwszą stronę.
 
 ```
@@ -268,8 +272,8 @@ const usePostPaginationInfiniteQuery = (query: PostQuery) => {
 export default usePostPaginationInfiniteQuery;
 
 ```
-  
-Wewnątrz komponentu w ramach hooka, pobieramy dodatkowo funkcję `fetchNextPage` udostępnianą przez `useInfiniteQuery` i przypisujemy ją do przycisku _Load more_. Zwracane dane nie zawierają już poprostu tablicy Posts. `useInfiniteQuery` zwraca obiekt `InfiniteData<Post[]>` zawierający parametry `pages` oraz `pageParams`. Pages zawiera teraz konkretne strony, zawierające posty które trzeba wyrenderować z osobna. Niestety JS domyślnie nie posiada funkcji `flatMap`. Trzeba więc mapować każdą stronę z postami, owrapowaną we Fragment i wewnątrz niego dopiero renderować konkretne posty. 
+
+Wewnątrz komponentu w ramach hooka, pobieramy dodatkowo funkcję `fetchNextPage` udostępnianą przez `useInfiniteQuery` i przypisujemy ją do przycisku _Load more_. Zwracane dane nie zawierają już poprostu tablicy Posts. `useInfiniteQuery` zwraca obiekt `InfiniteData<Post[]>` zawierający parametry `pages` oraz `pageParams`. Pages zawiera teraz konkretne strony, zawierające posty które trzeba wyrenderować z osobna. Niestety JS domyślnie nie posiada funkcji `flatMap`. Trzeba więc mapować każdą stronę z postami, owrapowaną we Fragment i wewnątrz niego dopiero renderować konkretne posty.
 
 ```
 import { Fragment } from 'react';
@@ -311,21 +315,24 @@ export default PostListPaginationInfinite;
 ```
 
 ### Infinite scroll
+
 Do zaimplementowania inifinite scroll należy skorzystać z [biblioteki](https://www.npmjs.com/package/react-infinite-scroll-component).
 `npm install --save react-infinite-scroll-component`  
 Następnie wystarczy owrapować kod odpowiedzialny za wyświetlanie treści w tag `<InfiniteScroll>` zaimportowany jako `import InfiniteScroll from 'react-infinite-scroll-component';`.
 Sam tak wymaga przekazania kilku konfiguracji:
+
 ```
-    <InfiniteScroll 
+    <InfiniteScroll
       dataLength={fetchedGamesCount}
       hasMore={!!hasNextPage}
       next={() => fetchNextPage()}
       loader ={<Spinner />}>
 ```
+
 - `dataLength` oznacza ilość już pobranych danych, można wykorzystać funkcję reduce: `const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.results.length, 0) || 0;` Konieczny jest dodatkowy warunek `|| 0` ponieważ reduce może zwrócić undefined, którego nie akceptuje funkcja. Musimy przekazać jakąś wartość liczbową.
-- `hasMore` można przypisać do `hasNextPage` pochodzącego z `useInfiniteQuery` tutaj koniecznie bang operator, ponieważ również może pojawić się undefined. 
--  `next` oczekuje funkcji dociągającej kolejne dane. Ponownie nada się funkcja z `useInfiniteQuery`
-- `loader` oczekuje spinnera albo skeleton. 
+- `hasMore` można przypisać do `hasNextPage` pochodzącego z `useInfiniteQuery` tutaj koniecznie bang operator, ponieważ również może pojawić się undefined.
+- `next` oczekuje funkcji dociągającej kolejne dane. Ponownie nada się funkcja z `useInfiniteQuery`
+- `loader` oczekuje spinnera albo skeleton.
 
 ```
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -368,6 +375,7 @@ export default useGames;
 ```
 
 **KOMPONENT**
+
 ```
 import { SimpleGrid, Spinner, Text } from '@chakra-ui/react';
 import useGames from '../hooks/useGames';
@@ -392,7 +400,7 @@ const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.resul
 
   return (
     <>
-    <InfiniteScroll 
+    <InfiniteScroll
       dataLength={fetchedGamesCount}
       hasMore={!!hasNextPage}
       next={() => fetchNextPage()}
@@ -419,3 +427,60 @@ const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.resul
   );
 };
 ```
+
+## Mutacje danych
+
+Modyfikowanie lub zmianienie danych, w źródle. Mutacje pozwalają na automatyczną synchronizację wyników z serwerem oraz aktualizajcę lokalnego stanu danych w pamięci podręcznej.
+
+Do przeprowadzenia mutacji wykorzystujemy hook `useMutation`. Hook wymaga funkcji `mutationFn` odpowiedzialenej za faktyczną zmianę jak POST czy DELETE.
+
+Hook `useMutation` zwraca wówczas **obiekt**
+
+```
+const addTodo = useMutation({
+    mutationFn: (todo: Todo) =>
+    axios
+      .post('https://jsonplaceholder.typicode.com/todos', todo)
+      .then(res => res.data)
+  });
+```
+
+W komponencie, przy zapisywaniu funkcji dla formularza wykorzystujemy funkcję `mutate` udostępnianą przez obiekty zwracane w `useMutation`. Funkcja ta odwoła się do wcześniej zdefiniowanej `mutationFn`. Przykład poniżej z zapisem funkcji `onSubmit` gdzie `mutationFn` oczekuje obiektu _Todo_ pozyskanego z formularza:
+```
+onSubmit={event => {
+  event.preventDefault();
+  if (ref.current && ref.current.value) {
+    addTodo.mutate({
+      id: 0,
+      title: ref.current.value,
+      completed: false,
+      userId: 1,
+    });
+  }
+}}
+```
+
+## onSuccess, onError, onSettled- dodatkowe funkcje useMutation
+Poza opisywanym `mutationFn` w ramach `useMutation` możemy zdefiniować inne funkcje wywoływane w zależności od etapu/ rezultatu żądania. **onSettled wykonuje się niezależnie od rezulatu- na sukces i error**.  
+- ***onSuccess*** wykorzystuje 2 parametry- otrzmyany obiekt i wysłany do serwera
+```
+onSuccess: (savedTodo, sentTodo) => {
+  // INVALIDATE lub Uaktualnienie danych w cache
+}
+```
+### QueryClient- Invalidating data
+Jeden sposobów na reakcję na zmianę danych- po wysłaniu/ usunięciu/ zmodyfikowaniu danych na serwerze możemy zasygnalizować `ReactQuery`, że dane przechowywane w catche są nieaktualne i powinien pobrać nowe. **W tym celu należy odwołać się do obiektu `QueryClient`**. Aby uzyskać do niego dostęp wykorzystujemy hook `useQueryClient`. Następnie wywołujemy funkcję `invalidateQueries` i przekazujemy klucz którego dane zostaną unieważnione.
+```
+onSuccess: (savedTodo, sentTodo) => {
+  queryClient.invalidateQueries({
+    queryKey: ['todos']
+  })
+}
+```
+  
+**Uaktualnienie danych**  
+Innym sposobem jest uaktualnienie danych w cache z pomocą funkcji `setQueryData` przyjmującą dwa argumenty- klucz oraz `updater` function.`setQueryData` powinno być zapisane w generyczny sposób aby umożliwić rozpoznawanie typu w `updater`. W przypadku listy Todo funkcja ta przyjmuje (obecne) zadania i zwraca nowe, uaktualnione.
+```
+queryClient.setQueryData<Todo[]>(['todos], todos => [newTodo, ...todos])
+```
+Implementacja różni się od rodzaju operacji. W innym przypadku, przy aktualizacji jakigoś wpisu możemy chcieć go odszukać i zmienić zamiast dodawać nowy, jak tutaj.

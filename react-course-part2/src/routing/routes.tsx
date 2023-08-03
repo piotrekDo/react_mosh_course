@@ -8,6 +8,7 @@ import ErrorPage from './ErrorPage';
 import PostListPagination from './PostListPagination';
 import PostListPaginationInfinite from './PostListPaginationInfinite';
 import { Characters } from './rick_and_morty_api/Characters';
+import { MutatingBasic } from './MutatingBasic';
 const router = createBrowserRouter([
   {
     path: '/',
@@ -19,7 +20,8 @@ const router = createBrowserRouter([
       { path: 'contact', element: <ContactPage /> },
       { path: '/post-pagination', element: <PostListPagination /> },
       { path: '/post-pagination-infinite', element: <PostListPaginationInfinite /> },
-      {path: '/rick-and-morty-characters', element: <Characters />}
+      { path: '/rick-and-morty-characters', element: <Characters /> },
+      { path: '/mutating-basic', element: <MutatingBasic /> },
     ],
   },
 ]);

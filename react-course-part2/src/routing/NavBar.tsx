@@ -34,6 +34,11 @@ const NavBar = () => {
                 Rick and Morty postaci
               </NavLink>
             </li>
+            <li>
+              <NavLink to='/mutating-basic' className='nav-link'>
+                Mutacje
+              </NavLink>
+            </li>
           </ul>
         </div>
       </div>

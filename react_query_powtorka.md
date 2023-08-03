@@ -430,6 +430,8 @@ const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.resul
 
 ## Mutacje danych
 
+**Typy generyczne** przy zapisie `useMutation`: `useMutation<Zwracane, Error, Wysłane>`. Typy danych reprezentują odpowiednio: dane, które otrzymujemy w odpowiedzi, typ błędu (w przypadku Axios jest to interfejs Error), dane które wysyłamy na serwer.  **Dodatkowo**, czwartym typem danych może być _kontext_ czyli stan danych przed wykonaniem mutacji, w tym przypadku będzie to lista Todo. Kontekst tworzymy wewnątrz funkcji `onMutate` i możemy się do niego odwołać później przy implementacji `onError`.
+  
 Modyfikowanie lub zmianienie danych, w źródle. Mutacje pozwalają na automatyczną synchronizację wyników z serwerem oraz aktualizajcę lokalnego stanu danych w pamięci podręcznej.
 
 Do przeprowadzenia mutacji wykorzystujemy hook `useMutation`. Hook wymaga funkcji `mutationFn` odpowiedzialenej za faktyczną zmianę jak POST czy DELETE.
@@ -484,3 +486,6 @@ Innym sposobem jest uaktualnienie danych w cache z pomocą funkcji `setQueryData
 queryClient.setQueryData<Todo[]>(['todos], todos => [newTodo, ...todos])
 ```
 Implementacja różni się od rodzaju operacji. W innym przypadku, przy aktualizacji jakigoś wpisu możemy chcieć go odszukać i zmienić zamiast dodawać nowy, jak tutaj.
+
+### Optimistic update
+W celu zaimplementowania _optimistic_ należy nadpisać funkcję `onMutate` wywoływaną w trakcie przeprowadzania zmian. W jej zapisie można dodać nowy element do listy poprzez dopisanie go to cache i nadpisać jego ID gdy mutacja się zakończy.

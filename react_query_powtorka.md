@@ -26,6 +26,118 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 
 ## Custom query hook i API
 
+Tworzenie abstrakcji do komunikacji z serwerem ma charakter piramidy i rozpoczyna się od niskopoziomowego klienta obsługującego żądania http, poprzez serwis do konkretnego hooka jak pobieranie czy edycja danych. Zatem zawsze powinniśmy mieć:
+
+- **_API client_** jeden na każdy _base URL_
+- **_Klasy serwisowe_** przygotowują konkretny _API client_ pod `endpoint` do _base URL_. Np osobne serwisy todos czy posts dla **jednego** tylko `JsonPlaceHolderAPIClient`
+- **_Hooki_** ich ilość mnożymy przez konkretne operacje jak _pobieranie wszystkich danych_, _dodanie_ i _edycja_ rekordu czy jego _usunięcie_.
+
+## API Client
+
+Zadaniem API client jest wydzielenie metod Axios do komunikacji z serwerem. Można go zapisać w postaci klasy z polem `endpoint` odpowiedniego dla instancji jak post czy todo. Dodatkowo jest on generyczny i typ ten odpowiada typowi danych zwracanych/ wysyłanych do serwera. Całość tworzenia odpowidniego klienta zostanie później _zamaskowana_ w ramach serwisu zwracającego odpowiednią instancję API client.
+
+```
+import axios from 'axios';
+
+const axiosInstance = axios.create({
+  baseURL: 'https://jsonplaceholder.typicode.com',
+});
+
+class APIClient<T> {
+  endpoint: string;
+
+  constructor(endpoint: string) {
+    this.endpoint = endpoint;
+  }
+
+  getAll = () => {
+    return axiosInstance.get<T[]>(this.endpoint).then(res => res.data);
+  };
+
+  post = (data: T) => {
+    return axiosInstance.post<T>(this.endpoint, data).then(res => res.data);
+  };
+}
+
+export default APIClient;
+```
+
+### Custom API service
+
+Jest implementacją klasy `APIClient` i tworzony każdorazowo dla innego typu danch i endpoint. Wykorzystywany w konkretnych hookach zapobiega duplikacji kodu.
+
+```
+import APIClient from "./apiClient";
+
+export interface Todo {
+    id: number;
+    title: string;
+    userId: number;
+    completed: boolean;
+  }
+
+export default new APIClient<Todo>('/todos');
+```
+
+### Custom hook
+
+Ostatecznie hook do pozyskiwania danych może wyglądać następująco:
+
+```
+import { useQuery } from "@tanstack/react-query";
+import todoService, { Todo } from "../react-query/services/todoService";
+import { CACHE_KEY_TODOS } from "../react-query/constants";
+
+const useTodos = () => {
+    return useQuery<Todo[], Error>({
+        queryKey: CACHE_KEY_TODOS,
+        queryFn: todoService.getAll,
+        staleTime: 10 * 1000 //10sec
+      });
+}
+
+export default useTodos;
+```
+
+### Custom Mutation hook
+
+Przekazywana do hooka funkcja `onAdd` zajmuje się jedynie wyczyszczeniem formularza w komponencie.
+
+```
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CACHE_KEY_TODOS } from '../react-query/constants';
+import todoService, { Todo } from '../react-query/services/todoService';
+
+export interface AddTodoContext {
+  previousTodos: Todo[];
+}
+
+const useAddTodo = (onAdd: () => void) => {
+  const queryClient = useQueryClient();
+  return useMutation<Todo, Error, Todo, AddTodoContext>({
+    mutationFn: todoService.post,
+    onMutate: (newTodo: Todo) => {
+      const previousTodos = queryClient.getQueryData<Todo[]>(CACHE_KEY_TODOS) || [];
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, (todos = []) => [newTodo, ...todos]);
+
+      onAdd();
+      return { previousTodos };
+    },
+    onSuccess: (savedTodo, sentTodo) => {
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, todos =>
+        todos?.map(todo => (todo === sentTodo ? savedTodo : todo))
+      );
+    },
+    onError: (error, sentTodo, context) => {
+      if (!context) return;
+      queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, context.previousTodos);
+    },
+  });
+};
+
+export default useAddTodo;
+```
+
 ## React Query DevTools
 
 `npm i @tanstack/react-query-devtools` w kursie `npm i @tanstack/react-query-devtools@4.28`  
@@ -430,8 +542,8 @@ const fetchedGamesCount = data?.pages.reduce((total, page) => total + page.resul
 
 ## Mutacje danych
 
-**Typy generyczne** przy zapisie `useMutation`: `useMutation<Zwracane, Error, Wysłane>`. Typy danych reprezentują odpowiednio: dane, które otrzymujemy w odpowiedzi, typ błędu (w przypadku Axios jest to interfejs Error), dane które wysyłamy na serwer.  **Dodatkowo**, czwartym typem danych może być _kontext_ czyli stan danych przed wykonaniem mutacji, w tym przypadku będzie to lista Todo. Kontekst tworzymy wewnątrz funkcji `onMutate` i możemy się do niego odwołać później przy implementacji `onError`.
-  
+**Typy generyczne** przy zapisie `useMutation`: `useMutation<Zwracane, Error, Wysłane>`. Typy danych reprezentują odpowiednio: dane, które otrzymujemy w odpowiedzi, typ błędu (w przypadku Axios jest to interfejs Error), dane które wysyłamy na serwer. **Dodatkowo**, czwartym typem danych może być _kontext_ czyli stan danych przed wykonaniem mutacji, w tym przypadku będzie to lista Todo. Kontekst tworzymy wewnątrz funkcji `onMutate` i możemy się do niego odwołać później przy implementacji `onError`.
+
 Modyfikowanie lub zmianienie danych, w źródle. Mutacje pozwalają na automatyczną synchronizację wyników z serwerem oraz aktualizajcę lokalnego stanu danych w pamięci podręcznej.
 
 Do przeprowadzenia mutacji wykorzystujemy hook `useMutation`. Hook wymaga funkcji `mutationFn` odpowiedzialenej za faktyczną zmianę jak POST czy DELETE.
@@ -448,6 +560,7 @@ const addTodo = useMutation({
 ```
 
 W komponencie, przy zapisywaniu funkcji dla formularza wykorzystujemy funkcję `mutate` udostępnianą przez obiekty zwracane w `useMutation`. Funkcja ta odwoła się do wcześniej zdefiniowanej `mutationFn`. Przykład poniżej z zapisem funkcji `onSubmit` gdzie `mutationFn` oczekuje obiektu _Todo_ pozyskanego z formularza:
+
 ```
 onSubmit={event => {
   event.preventDefault();
@@ -463,15 +576,21 @@ onSubmit={event => {
 ```
 
 ## onSuccess, onError, onSettled- dodatkowe funkcje useMutation
-Poza opisywanym `mutationFn` w ramach `useMutation` możemy zdefiniować inne funkcje wywoływane w zależności od etapu/ rezultatu żądania. **onSettled wykonuje się niezależnie od rezulatu- na sukces i error**.  
-- ***onSuccess*** wykorzystuje 2 parametry- otrzmyany obiekt i wysłany do serwera
+
+Poza opisywanym `mutationFn` w ramach `useMutation` możemy zdefiniować inne funkcje wywoływane w zależności od etapu/ rezultatu żądania. **onSettled wykonuje się niezależnie od rezulatu- na sukces i error**.
+
+- **_onSuccess_** wykorzystuje 2 parametry- otrzmyany obiekt i wysłany do serwera
+
 ```
 onSuccess: (savedTodo, sentTodo) => {
   // INVALIDATE lub Uaktualnienie danych w cache
 }
 ```
+
 ### QueryClient- Invalidating data
+
 Jeden sposobów na reakcję na zmianę danych- po wysłaniu/ usunięciu/ zmodyfikowaniu danych na serwerze możemy zasygnalizować `ReactQuery`, że dane przechowywane w catche są nieaktualne i powinien pobrać nowe. **W tym celu należy odwołać się do obiektu `QueryClient`**. Aby uzyskać do niego dostęp wykorzystujemy hook `useQueryClient`. Następnie wywołujemy funkcję `invalidateQueries` i przekazujemy klucz którego dane zostaną unieważnione.
+
 ```
 onSuccess: (savedTodo, sentTodo) => {
   queryClient.invalidateQueries({
@@ -479,13 +598,16 @@ onSuccess: (savedTodo, sentTodo) => {
   })
 }
 ```
-  
+
 **Uaktualnienie danych**  
 Innym sposobem jest uaktualnienie danych w cache z pomocą funkcji `setQueryData` przyjmującą dwa argumenty- klucz oraz `updater` function.`setQueryData` powinno być zapisane w generyczny sposób aby umożliwić rozpoznawanie typu w `updater`. W przypadku listy Todo funkcja ta przyjmuje (obecne) zadania i zwraca nowe, uaktualnione.
+
 ```
 queryClient.setQueryData<Todo[]>(['todos], todos => [newTodo, ...todos])
 ```
+
 Implementacja różni się od rodzaju operacji. W innym przypadku, przy aktualizacji jakigoś wpisu możemy chcieć go odszukać i zmienić zamiast dodawać nowy, jak tutaj.
 
 ### Optimistic update
+
 W celu zaimplementowania _optimistic_ należy nadpisać funkcję `onMutate` wywoływaną w trakcie przeprowadzania zmian. W jej zapisie można dodać nowy element do listy poprzez dopisanie go to cache i nadpisać jego ID gdy mutacja się zakończy.

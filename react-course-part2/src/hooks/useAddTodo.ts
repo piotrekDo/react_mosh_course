@@ -13,7 +13,6 @@ const useAddTodo = (onAdd: () => void) => {
     onMutate: (newTodo: Todo) => {
       const previousTodos = queryClient.getQueryData<Todo[]>(CACHE_KEY_TODOS) || [];
       queryClient.setQueryData<Todo[]>(CACHE_KEY_TODOS, (todos = []) => [newTodo, ...todos]);
-
       onAdd();
       return { previousTodos };
     },
